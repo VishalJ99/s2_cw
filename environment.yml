@@ -1,0 +1,13 @@
+name: s2_cw
+channels:
+  - defaults
+dependencies:
+  - flake8
+  - sphinx
+  - scipy
+  - pytest
+  - matplotlib
+  - black
+  - pre-commit
+  - numpy
+  - pandas
