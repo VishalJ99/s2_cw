@@ -6,3 +6,8 @@ __pycache__/
 # Folders
 output/
 docs/
+
+report/*
+!report/main.pdf
+!report/main.tex
+!report/figs/*

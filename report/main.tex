@@ -1,0 +1,163 @@
+
+
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs} % For prettier tables
+\usepackage{siunitx}
+\usepackage{amssymb}
+% Set page margins
+\geometry{a4paper, margin=1in}
+
+% Set up code listing style
+\lstset{
+    basicstyle=\ttfamily,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    captionpos=b
+}
+
+\title{The Lighthouse Problem: S2 coursework report}
+\author{Vishal Jain}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+\section{Introduction}
+This coursework is based on the Lighthouse problem. Where a lighthouse is at position \( \alpha \) along a straight coastline and a distance \( \beta \) out to sea. The lighthouse rotates and emits flashes at uniformly-distributed random angles \( \theta \); the light beams are narrow and (if \( -\frac{\pi}{2} < \theta < \frac{\pi}{2} \)) intersect the coastline at a single point. An array of detectors spread along the coastline record the locations \( x_k \) (where \( k = 1, 2, \ldots, N \)) where \( N \) flashes are received; the detectors only record that a flash has occurred, not the direction from which it was received. Your task is to find the location of the lighthouse. The setup is illustrated in Fig \ref{fig:setup}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{figs/set-up.png}
+    \caption{The lighthouse problem setup}
+    \label{fig:setup}
+\end{figure}
+
+
+\subsection{Part i - Trigonometric relationship between variables}
+
+From basic trigonometry, the tangent of the angle \( \theta \), where \( \theta \) is the angle of the light beam with respect to a line perpendicular to the coastline, is defined as the ratio of the opposite side to the adjacent side of the right angled triangle formed by the points $(\alpha,\beta)$, $(x,0)$ and $(\alpha,0)$. This relationship can be represented as:
+\[
+\tan(\theta) = \frac{x-\alpha}{\beta}.
+\]
+
+\subsection{Part ii - Probability density function of \( x \)}
+
+
+the probability density function of \( x \) can be found from the following relationship:
+\[
+Pr(\theta)d\theta = Pr(x)dx
+\]
+Given that \( \theta \sim U(-\frac{\pi}{2}, \frac{\pi}{2}) \),
+The probability density function of \( \theta \) is defined as:
+\[
+Pr(\theta) = \left\{
+    \begin{array}{ll}
+        \frac{1}{\pi} & \text{if } -\frac{\pi}{2} \leq \theta \leq \frac{\pi}{2} \\
+        0 & \text{otherwise}
+    \end{array}
+\right.
+\]
+Therefore, in this interval, the probability density function of \( x \) is given by:
+$$
+Pr(x) = Pr(\theta)\frac{d\theta}{dx} 
+$$
+$$
+= \frac{1}{\pi} \frac{d\theta}{dx}
+$$
+$$
+= \frac{1}{\pi} \frac{d}{dx} \arctan \left( \frac{x-\alpha}{\beta} \right)
+$$
+\begin{equation}
+\therefore Pr(x) = \frac{1}{\pi} \left( \frac{\beta}{\beta^2 + (x-\alpha)^2} \right)
+\label{eq:pdf_x}
+\end{equation}
+
+Where the last line follows from the standard derivative formula for the arctan function:
+\[
+\frac{d}{dx} \arctan(x) = \frac{1}{1+x^2}
+\]
+Using this expression with the chain rule, we obtain the probability density function for \( x \) as shown.
+
+\section{Finding the Lighthouse}
+\subsection{Part iii - Most likely location of a flash}
+Given the previously calculated probability density function of \( x \), the distribution can be visualised for different light house locations. Figure \ref{fig:cauchy_distribution} shows the probability density function of \( x \) for 3 different choices of \( \alpha \) and \( \beta \). The plots reveal several interesting properties about the PDF of $x$. Firstly, as the value of $\beta$ decreases, the peak
+becomes more pronounced. This makes sense as, the closer the lighthouse to the shore, the more information its flashes would give about its location along the shore. The plots also reveals that the peak of the distribution occurs at $x=\alpha$, this can also be seen by inspection of equation \ref{eq:pdf_x}. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figs/cauchy_distribution.png}
+    \caption{Probability density function of \( x \) for 3 different choices of \( \alpha \) and \( \beta \)}
+    \label{fig:cauchy_distribution}
+\end{figure}
+
+To estimate $\alpha$, one may consider using the sample mean of $x$, however, since $x$ follows a cauchy distribution, the sample mean will not converge as the distribution's mean and variance are both undefined.
+
+Another way to show that the sample mean is not a good estimator of $\alpha$ is to consider the maximum likelihood estimator of $\alpha$, which is a good estimator.
+
+The MLE estimate of $\alpha$ can be found by taking the derivative of the log likelihood function with respect to $\alpha$ and setting it to zero. The likelihood function of a set of flashes $\{x_k\}$ is given by:
+\[
+L(\{x_k\}|\alpha,\beta) = \prod_{k=1}^{N} Pr(x_k),
+\] this follows by the independence of the flashes. The log likelihood function is then given by:
+\[
+\log L(\{x_k\}|\alpha,\beta) = \sum_{k=1}^{N} \log Pr(x_k).
+\] Substituting in the expression for $Pr(x)$ from equation \ref{eq:pdf_x} gives:
+\[
+\log L(\{x_k\}|\alpha,\beta) = \sum_{k=1}^{N} \log \left( \frac{\beta}{\pi(\beta^2 + (x_k-\alpha)^2)} \right).
+\]
+Taking the derivative of this with respect to $\alpha$ and setting it to zero gives the expression:
+\[
+0 = \sum_{k=1}^{N} \frac{2(x_k-\hat\alpha)}{(\beta^2 + (x_k - \hat\alpha)^2)^2},
+\] where $\hat\alpha$ is the MLE estimate of $\alpha$. This equation can be solved numerically to find the MLE estimate of $\alpha$. Note how the MLE estimate of $\alpha$ is not the sample mean of $x$.
+
+\subsection{Part iv - Prior distribution of $\alpha$ and $\beta$}
+
+To build a posterior distribution of $\alpha$ and $\beta$, we need to define a prior distribution for these parameters. The choice of prior should capture the current state of belief regarding the values of $\alpha$ and $\beta$. As the lighthouse is equally likely to be at any location along the coast and at any distance from the coast, choosing a uniform prior distribution is a sensible approach. This is because a uniform prior distribution assigns equal probability to all values of $\alpha$ and $\beta$.
+To choose the bounds of the uniform prior distribution, we can consider the range of possible values for $\alpha$ and $\beta$ from the 
+TODO define lims
+
+\subsection{Part v - Posterior distribution of $\alpha$ and $\beta$}
+
+The posterior $p(\alpha, \beta | \{x_k\})$ can be found using Bayes' theorem:
+\[
+p(\alpha, \beta | \{x_k\}) = \frac{p(\{x_k\} | \alpha, \beta) p(\alpha, \beta)}{p(\{x_k\})},
+\] where $p(\{x_k\} | \alpha, \beta)$ is the likelihood function, $p(\alpha, \beta)$ is the prior distribution and $p(\{x_k\})$ is the marginal likelihood. The marginal likelihood can be found by integrating the likelihood function over all possible values of $\alpha$ and $\beta$:
+
+To draw samples from the posterior distribution, we can use the Metropolis-Hastings algorithm. The Metropolis-Hastings algorithm is a Markov Chain Monte Carlo (MCMC) method that generates a sequence of samples from a target distribution. The algorithm works by proposing a new sample from a proposal distribution and then accepting or rejecting the sample based on the ratio of the target distribution at the proposed sample to the current sample. The algorithm is as follows:
+
+\begin{algorithm}
+\caption{Metropolis-Hastings algorithm}
+\begin{algorithmic}
+\State Initialise $\alpha$ and $\beta$
+\For{$i = 1$ to $N$}
+    \State Propose a new sample $\alpha'$ and $\beta'$ from a proposal distribution
+    \State Calculate the acceptance ratio $r = \frac{p(\alpha', \beta' | \{x_k\})}{p(\alpha, \beta | \{x_k\})}$
+    \State Generate a random number $u$ from a uniform distribution between 0 and 1
+    \If{$u < r$}
+        \State Accept the sample $\alpha'$ and $\beta'$
+    \Else
+        \State Reject the sample $\alpha'$ and $\beta'$
+    \EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+
+\end{document}
