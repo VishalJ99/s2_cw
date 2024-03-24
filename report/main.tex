@@ -362,6 +362,29 @@ To draw samples from the posterior, 10 chains were run with taking 100000 steps 
     \caption{Mean and standard deviation of the parameter's $\alpha$, $\beta$ and $I_0$ marginal distributions.}
     \label{tab:mean_std_2}
 \end{table}
+\subsubsection{Convergence diagnostics}
+To ensure that the chains have converged, the trace plots of the chains shown in figures \ref{fig:trace_plots_alpha_2}, \ref{fig:trace_plots_beta_2} and \ref{fig:trace_plots_I0} were inspected. The plots show that after the burn in period, the chains are well mixed and do not show any non stationary behaviour. These are signs of convergence. Further, the gelman rubin statistic was calculated to be 1.003, 1.001 and 1.001 for $\alpha$, $\beta$ and $I_0$ respectively, supporting the conclusion that the chains have converged.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figs/trace_plot_alpha_2.png}
+    \caption{Trace plots of samples of $\alpha$}
+    \label{fig:trace_plots_alpha_2}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figs/trace_plot_beta_2.png}
+    \caption{Trace plots of samples of $\beta$}
+    \label{fig:trace_plots_beta_2}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figs/trace_plot_I0.png}
+    \caption{Trace plots of samples of $I_0$}
+    \label{fig:trace_plots_I0}
+\end{figure}
 
 \bibliographystyle{plainnat} % or another style depending on your requirements
 \bibliography{ref.bib} % the name of your .bib file

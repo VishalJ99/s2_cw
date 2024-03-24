@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
+
 def gelman_rubin(chains):
     """
     Computes the Gelman-Rubin statistic for a chain of samples.
@@ -51,6 +52,25 @@ def make_joint_plot(iid_samples):
 
 
 def make_trace_plot(chains, param_idx, param_name, N_view=1000):
+    """
+    Generates a trace plot for the given chains.
+    
+    Parameters
+    ----------
+    chains : np.ndarray
+        An array of chains, expected to have shape (n_chains, n_samples, n_parameters).
+    param_idx : int
+        The index of the parameter to plot.
+    param_name : str
+        The name of the parameter to plot.
+    N_view : int, optional
+        The number of samples to view in the zoomed-in plots.
+    
+    Returns
+    -------
+    plt : matplotlib.pyplot
+        The plot object.
+    """
     # Assuming chains_1 is your list of chains and each chain has a shape of (N, M) where N is the number of samples
     N = chains[0].shape[0]  # Total number of samples in a chain
     middle_start = N//2 - 500  # Starting index for the middle 1000 samples, adjust as necessary
@@ -79,6 +99,55 @@ def make_trace_plot(chains, param_idx, param_name, N_view=1000):
     for chain in chains:
         ax_zoom2.plot(chain[middle_start:middle_start+N_view, param_idx], alpha=0.5, label=f'{param_name} (middle 1000)')
     ax_zoom2.set_title(f'Trace of Middle {N_view} Samples', fontsize=18)
+
+    plt.tight_layout()
+    return plt
+
+
+def make_corner_plot(iid_samples, parameter_names=None):
+    """
+    Generates a corner plot for the given iid samples.
+
+    Parameters:
+    -----------
+    iid_samples : np.ndarray
+        The iid samples to plot. Shape should be (n_samples, n_parameters).
+    parameter_names : List[str], optional
+        The names of the parameters. If None, default names will be used.
+        
+    Returns:
+    --------
+    plt : matplotlib.pyplot
+        The plot object.
+    """
+    n_parameters = iid_samples.shape[1]
+    if parameter_names is None:
+        parameter_names = [f"Param {i+1}" for i in range(n_parameters)]
+
+    fig, axes = plt.subplots(n_parameters, n_parameters, figsize=(10, 10))
+
+    for i in range(n_parameters):
+        for j in range(n_parameters):
+            ax = axes[i, j]
+            if i == j:  # Plot the marginal distribution
+                ax.hist(iid_samples[:, i], bins=100)
+                mean = np.mean(iid_samples[:, i])
+                std = np.std(iid_samples[:, i])
+                ax.axvline(mean, color='red', linestyle='-')
+                ax.axvline(mean + std, color='red', linestyle='--')
+                ax.axvline(mean - std, color='red', linestyle='--')
+                ax.set_title(f"{parameter_names[i]}"+ f" = {mean:.3f} + $\pm {std:.4f}$", color='red')
+            elif i > j:  # Plot the hexbin heatmap for joint distributions
+                ax.hexbin(iid_samples[:, j], iid_samples[:, i], gridsize=50, cmap='magma', bins='log')
+            else:  # Remove upper triangle
+                ax.axis('off')
+
+            # Set labels
+            if j == 0 and i > 0:  # Only label the leftmost subplots for clarity
+                ax.set_ylabel(parameter_names[i])
+            if i == n_parameters-1:  # Only label the bottom subplots for clarity
+                ax.set_xlabel(parameter_names[j])
+    fig.suptitle(f"Corner plot of the parameters (N={len(iid_samples)})")
 
     plt.tight_layout()
     return plt
