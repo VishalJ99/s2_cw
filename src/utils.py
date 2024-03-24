@@ -97,7 +97,9 @@ def make_trace_plot(chains, param_idx, param_name, N_view=1000):
     # Subplot 2 - Zoom on middle N samples
     ax_zoom2 = plt.subplot(gs[1, 1])
     for chain in chains:
-        ax_zoom2.plot(chain[middle_start:middle_start+N_view, param_idx], alpha=0.5, label=f'{param_name} (middle 1000)')
+        ax_zoom2.plot(np.arange(middle_start, middle_start+N_view),
+                      chain[middle_start:middle_start+N_view, param_idx],
+                      alpha=0.5, label=f'{param_name} (middle 1000)')
     ax_zoom2.set_title(f'Trace of Middle {N_view} Samples', fontsize=18)
 
     plt.tight_layout()
