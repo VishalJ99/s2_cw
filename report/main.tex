@@ -129,35 +129,103 @@ Taking the derivative of this with respect to $\alpha$ and setting it to zero gi
 
 \subsection{Part iv - Prior distribution of $\alpha$ and $\beta$}
 
-To build a posterior distribution of $\alpha$ and $\beta$, we need to define a prior distribution for these parameters. The choice of prior should capture the current state of belief regarding the values of $\alpha$ and $\beta$. As the lighthouse is equally likely to be at any location along the coast and at any distance from the coast, choosing a uniform prior distribution is a sensible approach. This is because a uniform prior distribution assigns equal probability to all values of $\alpha$ and $\beta$.
-To choose the bounds of the uniform prior distribution, we can consider the range of possible values for $\alpha$ and $\beta$ from the 
-TODO define lims
+To build a posterior distribution of $\alpha$ and $\beta$, we need to define a prior distribution for these parameters. The choice of prior should capture the current state of belief regarding the values of $\alpha$ and $\beta$. As the lighthouse is equally likely to be at any location along the coast and at any distance from the coast, choosing a uniform prior distribution is a sensible approach. This is because a uniform prior distribution assigns equal probability to all values of $\alpha$ and $\beta$. 
+\begin{equation}
+Pr(\alpha, \beta) = \left\{
+    \begin{array}{ll}
+        \frac{1}{(a-b)(c-d)} & \text{if }  a \leq \alpha \leq b \text{ and } c \leq \beta \leq d  \\
+        0 & \text{otherwise}
+    \end{array}
+\right.
+\end{equation}
+
+In theory the values for $a$, $b$, $c$ and $d$ should be determined in a manner which does not involve the data. However, in practice, to ensure the prior provides relevant support, the values of $a$, $b$, $c$ and $d$ are set by looking at the data and deciding on a conservative range. In this case, the values of $a$, $b$, $c$ and $d$ were set to be $-100$, $100$, $0$, $100$ respectively.
+
 
 \subsection{Part v - Posterior distribution of $\alpha$ and $\beta$}
 
 The posterior $p(\alpha, \beta | \{x_k\})$ can be found using Bayes' theorem:
 \[
 p(\alpha, \beta | \{x_k\}) = \frac{p(\{x_k\} | \alpha, \beta) p(\alpha, \beta)}{p(\{x_k\})},
-\] where $p(\{x_k\} | \alpha, \beta)$ is the likelihood function, $p(\alpha, \beta)$ is the prior distribution and $p(\{x_k\})$ is the marginal likelihood. The marginal likelihood can be found by integrating the likelihood function over all possible values of $\alpha$ and $\beta$:
+\] where $p(\{x_k\} | \alpha, \beta)$ is the likelihood function, $p(\alpha, \beta)$ is the prior distribution and $p(\{x_k\})$ is the bayesian evidence. 
+% Explain MH algorithm.
+To draw samples from the posterior distribution, we can use the Metropolis-Hastings algorithm. The Metropolis-Hastings algorithm is a Markov Chain Monte Carlo (MCMC)
+method that generates a sequence of samples from a target distribution. The algorithm works by first proposing a distribution $Q$ and starting point $\mathbf{x_0}$. The proposal is selected to be a distribution which is easy to sample from. Points are drawn from this proposal distribution and accepted or rejected based on an acceptance ratio. The acceptance ratio is a function of the proposal distribution and the target distribution. In the case below, a 2 dimensional gaussian is used as the proposal to draw points $(\alpha, \beta)$.
+% Explain pros and cons of MH algorithm
+This sampling algorithm is simple and also convenient in that it works only using ratios of the target distribution so the evidence is not required. The algorithm is outlined in Algorithm \ref{alg:metropolis_hastings}.
 
-To draw samples from the posterior distribution, we can use the Metropolis-Hastings algorithm. The Metropolis-Hastings algorithm is a Markov Chain Monte Carlo (MCMC) method that generates a sequence of samples from a target distribution. The algorithm works by proposing a new sample from a proposal distribution and then accepting or rejecting the sample based on the ratio of the target distribution at the proposed sample to the current sample. The algorithm is as follows:
-
-\begin{algorithm}
-\caption{Metropolis-Hastings algorithm}
-\begin{algorithmic}
-\State Initialise $\alpha$ and $\beta$
-\For{$i = 1$ to $N$}
-    \State Propose a new sample $\alpha'$ and $\beta'$ from a proposal distribution
-    \State Calculate the acceptance ratio $r = \frac{p(\alpha', \beta' | \{x_k\})}{p(\alpha, \beta | \{x_k\})}$
-    \State Generate a random number $u$ from a uniform distribution between 0 and 1
-    \If{$u < r$}
-        \State Accept the sample $\alpha'$ and $\beta'$
-    \Else
-        \State Reject the sample $\alpha'$ and $\beta'$
-    \EndIf
-\EndFor
-\end{algorithmic}
+\begin{algorithm}[H]
+    \caption{Metropolis Hastings}
+    \begin{algorithmic}[1]
+    \State $x_0 \sim \alpha$
+    \State $i \gets 0$
+    \While{$i \geq 0$}
+        \State $y \sim Q(y|x_i)$ \Comment{Proposal}
+        \State $a \gets \left(\frac{P(y)Q(x_i|y)}{P(x_i)Q(y|x_i)}\right)$ \Comment{MH acceptance probability}
+        \State $u \sim U(0,1)$
+        \If{$u < a$}
+            \State $x_{i+1} \gets y$ \Comment{Accept}
+        \Else
+            \State $x_{i+1} \gets x_i$ \Comment{Reject}
+        \EndIf
+        \State $i \gets i + 1$
+    \EndWhile
+    \end{algorithmic}
+    \label{alg:metropolis_hastings}
 \end{algorithm}
+    
+Note that the expression for the acceptance ratio $a$ simplifies to the ratio of the target distribution $\frac{P(y)}{P(x_i)}$ as the proposal distribution is symmetric. This is a key feature of the Metropolis-Hastings algorithm with symmetric proposal distributions. It is assumed that there is no correlation between the parameters $\alpha$ and $\beta$. As such the covariance matrix for the 2D gaussian proposal distribution is diagonal. 
 
+Since the consecutive points in the chain are generated sequentially from the previous point, they are not independent. To go from the samples returned by the Metropolis-Hastings algorithm to independent samples, there are 2 corrections that are made to the chain. Specifically, the 'burn-in' period must be discarded and the samples must be thinned. 
+The burn-in period is the number of samples that are discarded at the start of the chain before it converges towards the target distribution, ensuring that the subsequent samples are not influenced by the choice of initial values. The burn in is normally determined manually be inspecting the trace plots. The trace plot is just the name given to the plot of the random variables values (in this case $\alpha$ and $\beta$) as the chain progresses. 
+The thinning factor is the number of samples that are skipped to reduce the correlation between samples. To determine the number of samples to skip, the integrated autocorrelation time (IAT) is calculated. 
+\subsubsection{Aside: Emcee integrated autocorrelation time}
+To compute IAT, the \texttt{emcee.autocorr.integrate\_time} function was used. 
+This package deviates slightly from the definition of IAT. Which is defined as:
+\begin{equation}
+\tau_f = \sum_{\tau=-\infty}^{\infty} \rho_f(\tau)
+\end{equation}
+where  \(\tau_f\) is the IAT, \(\tau\) is the lag, which is the distance between elements of the chain, \(\rho_f(\tau)\) is the normalised autocorrelation as a function of \(\tau\). For a finite chain, you can estimate \(\rho_f(\tau)\) as
+\begin{equation}
+\hat{\rho}_f(\tau) = \frac{\hat{c}_f(\tau)}{\hat{c}_f(0)}
+\end{equation}
+where
+\begin{equation}
+\hat{c}_f(\tau) = \frac{1}{N - \tau} \sum_{n=1}^{N-\tau} (f_n - \mu_f) (f_{n+\tau} - \mu_f)
+\end{equation}
+and
+\begin{equation}
+\mu_f = \frac{1}{N} \sum_{n=1}^{N} f_n.
+\end{equation}
+Here \(N\) is the length of the chain and \(f_n\) is the value of the chain at the \(n\)th step and \(\mu_f\) is the sample mean of the chain. The integrated autocorrelation time \(\tau_f\) can now be estimated as:
 
+\begin{equation}
+\hat{\tau}_f = \sum_{\tau=-(N-1)}^{N-1} \hat{\rho}_f(\tau) = 1 + 2 \sum_{\tau=1}^{N-1} \hat{\rho}_f(\tau)
+\end{equation}
+However, the \texttt{emcee} package uses the following estimator for \(\tau_f\). 
+\begin{equation}
+\hat{\tau}_f(M) = 1 + 2 \sum_{\tau=1}^{M} \hat{\rho}_f(\tau)
+\end{equation}
+For some \(M \ll N\).  choosing the smallest value of \(M\) where \(M \ge C \hat{\tau}_f(M)\) for a constant \(C \approx 5\). This approach decreases the variance of the estimator at the cost of bias. A more detailed discussion can be found <CITE>.
+
+% Show param tuning of MH algorithm - justify 0 correlation between alpha and beta,
+To find the optimal standard deviation for the proposal distribution, 10 short chains were run from different starting points, sampled from the uniform prior. The acceptance rate and integrated autocorrelation time were calculated. The trade off between the acceptance rate and the integrated autocorrelation time was considered to find the optimal standard deviation. The results are shown in Figure \ref{fig:std_tuning}. To reduce the search space, the same standard deviation was used for both $\alpha$ and $\beta$.
+The optimal standard deviation was found to be 1.
+% Plot of auto corr vs std size and efficiency vs std size
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{figs/autocorrelation_time_vs_std.png}
+    \caption{Acceptance rate and integrated autocorrelation time for different standard deviations}
+    \label{fig:std_tuning}
+\end{figure}
+
+% Show joint hist, marginals and mean +- std of alpha and beta
+10 chains were run for 100000 samples each. The burn in period was set to 1000 from the trace plots shown in figure \ref{fig:trace_1} and the thinning factor was set using the maximum auto correlation length between alpha and beta after discarding the burn in samples. The Gelman Rubin statistic \cite{GelmanRubin1992} was calculated to be 1.0 for both $\alpha$ and $\beta$ indicating that the chains have converged. The samples were then plotted as a joint histogram. 
+
+The samples were then plotted as a joint histogram, marginal histograms and the mean $\pm$ standard deviation of $\alpha$ and $\beta$ were calculated. The results are shown in Figure \ref{fig:posterior}. The joint histogram shows the distribution of the samples in the $\alpha$ and $\beta$ plane. The marginal histograms show the distribution of the samples for $\alpha$ and $\beta$ separately. The mean $\pm$ standard deviation of $\alpha$ and $\beta$ were calculated to be $0.0 \pm 0.1$ and $1.0 \pm 0.1$ respectively. The results show that the posterior distribution of $\alpha$ and $\beta$ is centred around the true values of $0$ and $1$ respectively.
+% Show Convergence of MH algorithm: trace plots, gelman rubin statistic, autocorrelation plots.
+\bibliographystyle{plainnat} % or another style depending on your requirements
+\bibliography{ref.bib} % the name of your .bib file
+
+% Think about the best 
 \end{document}
