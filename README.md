@@ -9,9 +9,9 @@ This project codes up a solution to the lighthouse problem described in the `lig
 Run the following steps to set up the project:
 These steps assume conda is installed on your system. If not, please install it first.
 ```
-git clone git@gitlab.developers.cam.ac.uk:phy/data-intensive-science-mphil/S2_Assessment/vj279.git
+git clone git@github.com:VishalJ99/s2_cw.git
 
-cd vj279
+cd s2_cw
 
 conda env create -f environment.yml
 
