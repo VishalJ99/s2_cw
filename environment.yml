@@ -1,13 +1,11 @@
-name: s2_cw
+name: stats_cw
 channels:
   - defaults
 dependencies:
-  - flake8
-  - sphinx
-  - scipy
-  - pytest
+  - python=3.11
+  - numpy
   - matplotlib
   - black
-  - pre-commit
-  - numpy
-  - pandas
+  - pip
+  - pip:
+    - emcee
