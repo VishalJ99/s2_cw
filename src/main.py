@@ -179,8 +179,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run LightHouse Metropolis"
                                      " Hasting sampler.")
     parser.add_argument(
-        "--n_chains", type=int, default=5, help="Number of chains to run."
-        " Default is 5 chains."
+        "--n_chains", type=int, default=10, help="Number of chains to run."
+        " Default is 10 chains."
     )
     parser.add_argument(
         "--n_samples", type=int, default=100000, help="Number of samples to"
