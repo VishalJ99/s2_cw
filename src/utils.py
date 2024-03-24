@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 
 def gelman_rubin(chains):
     """
@@ -36,54 +37,48 @@ def gelman_rubin(chains):
     return R
 
 
-def make_trace_plot(all_chains):
-    # Make nicer.
-    n_chains, n_samples, _ = all_chains.shape
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 15))
+def make_joint_plot(iid_samples):
+    assert len(iid_samples.shape) == 2, "iid_samples should be a 2D array"
+    alpha_samples, beta_samples = iid_samples[:, 0].flatten(), iid_samples[:, 1].flatten()
 
-    # Main Trace plot (zoomed out)
-    for chain in all_chains:
-        alpha_samples, beta_samples = chain[:, 0], chain[:, 1]
-        ax1.plot(alpha_samples, label='alpha')
-        ax1.plot(beta_samples, label='beta')
-    
-    ax1.set_title('Trace plot of alpha and beta (Zoomed out)')
-    ax1.legend()
-    ax1.set_xlabel('Sample')
-    ax1.set_ylabel('Parameter value')
-
-    # Zoom in on the burn-in phase
-    burn_in_end = int(0.05 * n_samples)  # Adjust as necessary
-    for chain in all_chains:
-        alpha_samples, beta_samples = chain[:burn_in_end, 0], chain[:burn_in_end, 1]
-        ax2.plot(alpha_samples, label='alpha')
-        ax2.plot(beta_samples, label='beta')
-
-    ax2.set_title('Burn-in phase')
-    ax2.set_xlabel('Sample')
-    ax2.set_ylabel('Parameter value')
-
-    # Zoom in on an equilibrium phase
-    equilibrium_start = int(0.45 * n_samples)  # Adjust as necessary
-    equilibrium_end = int(0.55 * n_samples)  # Adjust as necessary
-    for chain in all_chains:
-        alpha_samples, beta_samples = chain[equilibrium_start:equilibrium_end, 0], chain[equilibrium_start:equilibrium_end, 1]
-        ax3.plot(alpha_samples, label='alpha')
-        ax3.plot(beta_samples, label='beta')
-
-    ax3.set_title('Equilibrium phase')
-    ax3.set_xlabel('Sample')
-    ax3.set_ylabel('Parameter value')
-
-    plt.tight_layout()
+    # First, plot the hexbin heatmap as before
+    plt.hexbin(alpha_samples, beta_samples, gridsize=100, cmap='magma', bins='log')
+    plt.xlabel(r"$\alpha$")
+    plt.ylabel(r"$\beta$")
+    plt.title(f"Joint distribution of alpha and beta (N={len(iid_samples_1)})")
+    plt.show()
     return plt
 
 
-def make_joint_plot(all_iid_samples):
-    fig, ax = plt.subplots(figsize=(10, 10))
-    alpha_samples, beta_samples = all_iid_samples[:, 0], all_iid_samples[:, 1]
-    ax.scatter(alpha_samples, beta_samples, alpha=0.5)
-    ax.set_title('Joint distribution of alpha and beta')
-    ax.set_xlabel('alpha')
-    ax.set_ylabel('beta')
+def make_trace_plot(chains, param_idx, param_name, N_view=1000):
+    # Assuming chains_1 is your list of chains and each chain has a shape of (N, M) where N is the number of samples
+    N = chains[0].shape[0]  # Total number of samples in a chain
+    middle_start = N//2 - 500  # Starting index for the middle 1000 samples, adjust as necessary
+
+    # Set up the grid
+    fig = plt.figure(figsize=(12, 8))
+    gs = gridspec.GridSpec(2, 2, height_ratios=[2, 1])
+
+    # Main plot
+    ax_main = plt.subplot(gs[:, 0])
+    for chain in chains:
+        ax_main.plot(chain[:, param_idx], alpha=0.5, label='alpha')
+    
+    ax_main.set_xlabel('Iteration', fontsize=16)
+    ax_main.set_ylabel(f'{param_name} value', fontsize=16)
+    ax_main.set_title(f'Trace plot of {param_name}', fontsize=20)
+
+    # Subplot 1 - Zoom on first N_view samples
+    ax_zoom1 = plt.subplot(gs[0, 1])
+    for chain in chains:
+        ax_zoom1.plot(chain[:N_view, param_idx], alpha=0.5, label=f'{param_name}  (first 1000)')
+    ax_zoom1.set_title(f'Trace of First {N_view} Samples', fontsize=18)
+
+    # Subplot 2 - Zoom on middle N samples
+    ax_zoom2 = plt.subplot(gs[1, 1])
+    for chain in chains:
+        ax_zoom2.plot(chain[middle_start:middle_start+N_view, param_idx], alpha=0.5, label=f'{param_name} (middle 1000)')
+    ax_zoom2.set_title(f'Trace of Middle {N_view} Samples', fontsize=18)
+
+    plt.tight_layout()
     return plt

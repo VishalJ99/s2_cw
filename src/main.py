@@ -10,100 +10,122 @@ import matplotlib.pyplot as plt
 from emcee.autocorr import integrated_time
 import matplotlib.pyplot as plt
 import random
-from corner import corner
 
 random.seed(42)
 np.random.seed(42)
 
 
 def main(n_chains, n_samples):
-    # Read the positional data
-    with open('lighthouse_flash_data.txt','r') as f:
+    # Load the data.
+    with open('lighthouse_flash_data.txt', 'r') as f:
         data = []
         lines = f.readlines()
         for line in lines:
             fmt_line = line.rstrip().split(' ')
             x = float(fmt_line[0])
-            i = float(fmt_line[1])
-            data.append([x, i])
-
-    # a, b = -100, 100
-    # c, d = 0, 50
-    # cov_Q = np.eye(2)
-    # all_chains = np.zeros((n_chains, n_samples, 2))
-    # all_iid_samples = []
-
-    # for i in range(n_chains):
-    #     print('[INFO] Running chain', i)
-    #     # Draw x0 from the prior.
-    #     alpha = np.random.uniform(a, b)
-    #     beta = np.random.uniform(c, d)
-    #     x0 = np.asarray([alpha, beta])
-
-    #     # Sample the posterior.
-    #     samples, acceptance = metropolis_sampler(lambda theta: log_p2(theta, data, uniform_2d), x0, n_samples, cov_Q)
-    #     all_chains[i] = samples
-
-    #     # Discard the burn-in.
-    #     samples = samples[int(0.1*n_samples):]
-    #     tau = max(integrated_time(samples[:, 0]), integrated_time(samples[:, 1]))
-    #     thinning = int(2*tau)
-    #     iid_samples = samples[::thinning]
-    #     print('[INFO] Integrated autocorrelation time:', tau)
-    #     print('[INFO] Number of samples:', len(iid_samples))
-    #     all_iid_samples.extend(iid_samples)
-
-    # gelman_rubin_statistic = gelman_rubin(all_chains)
-
-    # print('[INFO] Gelman-Rubin statistic:', gelman_rubin_statistic)
-
-    # mean_params = np.mean(all_iid_samples, axis=0)
-    # std_params = np.std(all_iid_samples, axis=0)
-
-    # print('[INFO] Mean alpha:', mean_params[0])
-    # print('[INFO] Mean beta:', mean_params[1])
-    # print('[INFO] Standard deviation alpha:', std_params[0])
-    # print('[INFO] Standard deviation beta:', std_params[1])
-
-    # np.save('samples_1.npy', all_iid_samples)
-    # ------------------
-    # Code for part vii.
-    # ------------------
-
+            I = float(fmt_line[1])
+            data.append([x, I])
+    
     # Prior limits for alpha.
     a, b = -100, 100
     # Prior limits for beta.
     c, d = 0, 50
     # Prior limits for I0.
-    e, f = 1e-5, 1e3
+    e, f = 1e-4, 1e2
 
-    cov_Q = np.asarray([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-    all_chains = np.zeros((n_chains, n_samples, 3))
+    # Define pdf lambda functions.
+    prior_1 = lambda theta: uniform_2d(theta, a, b, c, d)
+    prior_2 = lambda theta: log_uniform(theta, e, f)
+    log_posterior_1 = lambda theta: log_p(theta, data, prior_1)
+    log_posterior_2 = lambda theta: log_p2(theta, data, prior_1, prior_2)
+    
+    # ------------------
+    # Code for part v.
+    # ------------------
+    cov_Q = np.eye(2)
+    all_chains = np.zeros((n_chains, n_samples, 2))
     all_iid_samples = []
+
     for i in range(n_chains):
         print('[INFO] Running chain', i)
         # Draw x0 from the prior.
         alpha = np.random.uniform(a, b)
         beta = np.random.uniform(c, d)
-        I0 = loguniform.rvs(e, f)
-
-        x0 = np.asarray([alpha, beta, I0])
+        
+        # Define the initial state.
+        x0 = np.asarray([alpha, beta])
 
         # Sample the posterior.
-        samples, acceptance = metropolis_sampler(lambda theta: log_p2(theta, data, uniform_2d, log_uniform), x0, n_samples, cov_Q)
+        samples, _ = metropolis_sampler(log_posterior_1, x0, n_samples, cov_Q)
         all_chains[i] = samples
 
         # Discard the burn-in.
         samples = samples[int(0.1*n_samples):]
-        tau = max(integrated_time(samples[:, 0]), integrated_time(samples[:, 1]), integrated_time(samples[:, 2]))
+        
+        # Thin the chain.
+        tau = max(integrated_time(samples[:, i])
+                  for i in range(samples.shape[1]))
         thinning = int(2*tau)
         iid_samples = samples[::thinning]
         print('[INFO] Integrated autocorrelation time:', tau)
         print('[INFO] Number of samples:', len(iid_samples))
         all_iid_samples.extend(iid_samples)
 
+    # Calculate the Gelman-Rubin statistic.
     gelman_rubin_statistic = gelman_rubin(all_chains)
     print('[INFO] Gelman-Rubin statistic:', gelman_rubin_statistic)
+
+    # Calculate the mean and standard deviation for the parameters.
+    mean_params = np.mean(all_iid_samples, axis=0)
+    std_params = np.std(all_iid_samples, axis=0)
+
+    print('[INFO] Mean alpha:', mean_params[0])
+    print('[INFO] Mean beta:', mean_params[1])
+    print('[INFO] Standard deviation alpha:', std_params[0])
+    print('[INFO] Standard deviation beta:', std_params[1])
+
+    np.save('chains_1.npy', all_chains)
+    np.save('iid_samples_1.npy', all_iid_samples)
+    
+    # ------------------
+    # Code for part vii.
+    # ------------------
+    cov_Q = np.asarray([[1, 0, 0], [0, 0.5, 0], [0, 0, 5]])
+    all_chains = np.zeros((n_chains, n_samples, 3))
+    all_iid_samples = []
+    for i in range(n_chains):
+        print('[INFO] Running chain', i)
+        # Draw alpha, beta from uniform.
+        alpha = np.random.uniform(a, b)
+        beta = np.random.uniform(c, d)
+        
+        # Draw I0 from log uniform.
+        I0 = loguniform.rvs(e, f)
+
+        # Define the initial state.
+        x0 = np.asarray([alpha, beta, I0])
+
+        # Sample the posterior.
+        samples, _ = metropolis_sampler(log_posterior_2, x0, n_samples, cov_Q)
+        all_chains[i] = samples
+
+        # Discard the burn-in.
+        samples = samples[int(0.1*n_samples):]
+        tau = max(integrated_time(samples[:, i])
+                  for i in range(samples.shape[1]))
+
+        # Thin the chain.
+        thinning = int(2*tau)
+        iid_samples = samples[::thinning]
+        print('[INFO] Integrated autocorrelation time:', tau)
+        print('[INFO] Number of samples:', len(iid_samples))
+        all_iid_samples.extend(iid_samples)
+
+    # Calculate the Gelman-Rubin statistic.
+    gelman_rubin_statistic = gelman_rubin(all_chains)
+    print('[INFO] Gelman-Rubin statistic:', gelman_rubin_statistic)
+    
+    # Calculate the mean and standard deviation for the parameters.
     mean_params = np.mean(all_iid_samples, axis=0)
     std_params = np.std(all_iid_samples, axis=0)
 
@@ -114,7 +136,9 @@ def main(n_chains, n_samples):
     print('[INFO] Standard deviation alpha:', std_params[0])
     print('[INFO] Standard deviation beta:', std_params[1])
     print('[INFO] Standard deviation I0:', std_params[2])
-    np.save('samples_2.npy', all_iid_samples)
+
+    np.save('chains_2.npy', all_chains)
+    np.save('iid_samples_2.npy', all_iid_samples)
 
 
 if __name__ == "__main__":
